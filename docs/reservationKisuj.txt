@@ -1,0 +1,411 @@
+Készíts egy Laravel REST API-t, amely lehetővé teszi a „Kisúj Étterem” asztalfoglalásának
+online kezelését. A rendszer nem igényel bejelentkezést, tehát nyilvános API.
+
+Funkciók (CRUD)
+HTTP metódus URL: Művelet
+GET /api/reservations: Összes foglalás
+GET /api/reservations/{id}: Egy foglalás lekérdezése
+POST /api/reservations: Új foglalás létrehozása
+PUT/PATCH /api/reservations/{id}: Foglalás teljes/részleges módosítása
+DELETE /api/reservations/{id}: Foglalás törlése
+
+Reservation tábla adatai:
+$table->id();
+$table->string('name'); // vendég neve
+$table->string('email');
+$table->dateTime('reservation_time'); // foglalás időpontja
+$table->integer('guests'); // vendégek száma
+$table->string('note')->nullable(); // megjegyzés
+$table->timestamps();
+
+1. XAMPP indítása (Apache, MySQL) (Megjegyzés: Apache helyett a php artisan serve is használható, ilyenkor nem kell az url-be a "Public")
+
+2. Laravel projekt létrehozása C:\XAMPP\HTDOCS mappába
+composer create-project laravel/laravel --prefer-dist reservationKisuj
+
+3. routes/api.php létrehozása
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('api')->group(function () {
+    Route::get('/hello', function () {
+        return response()->json(['message' => 'Hello API']);
+    });
+});
+
+4. bootstrap/app.php ellenőrzése, hogy az api útvonalak benne vannak-e
+->withRouting(
+    web: __DIR__.'/../routes/web.php',
+    api: __DIR__.'/../routes/api.php',
+    commands: __DIR__.'/../routes/console.php',
+    health: '/up',
+)
+
+5. Laravel keretrendszer tesztje
+Böngészőbe: http://127.0.0.1/reservationKisuj/public/
+
+6. POSTMAN teszt
+GET http://127.0.0.1/reservationKisuj/public/api/hello
+
+7. Reservation modell és migráció létrehozása
+cd reservationKisuj
+
+(php artisan make:model Reservation
+ php artisan make:migration create_reservations_table)
+
+php artisan make:model Reservation -m
+
+Létrejön a két fájl:
+app/Models/Reservation.php
+database/migrations/2025_11_04_072352_create_reservations_table.php
+
+8. Adatbázis előkészítése - Ezt ne feltétlenül kell, mert a migration parancs megcsinálja ha kérjük, de mi csináljuk meg
+127.0.0.1/phpmyadmin/Új adatbázis: reservationkisuj utf8mb4_hungarian_ci
+
+9. .env fájl módosítása
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=reservationkisuj
+DB_USERNAME=root
+DB_PASSWORD=
+
+10. Migrációs fájl szerkesztése
+
+public function up()
+{
+    Schema::create('reservations', function (Blueprint $table) {
+        $table->id();
+        $table->string('name'); // vendég neve
+        $table->string('email');
+        $table->dateTime('reservation_time'); // foglalás időpontja
+        $table->integer('guests'); // vendégek száma
+        $table->string('note')->nullable(); // megjegyzés
+        $table->timestamps();
+    });
+}
+
+11. Modell kitöltése
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Reservation extends Model
+{
+    protected $fillable = [
+        'name',
+        'email',
+        'reservation_time',
+        'guests',
+        'note',
+    ];
+}
+----------------------------------------------------------------
+KÉZI SEEDER-elés:
+
+12. Seeders létrehozása
+php artisan make:seeder ReservationSeeder
+
+Létrejön a database\seeders\ReservationSeeder.php
+
+13. ReservationSeeder szerkesztése
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Reservation;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+class ReservationSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Reservation::create([
+            'name' => 'Kovács Péter',
+            'email' => 'peter.kovacs@example.com',
+            'reservation_time' => '2025-11-10 18:00:00',
+            'guests' => 4,
+            'note' => 'Születésnapi vacsora',
+        ]);
+    }
+}
+
+14. DatabaseSeeder.php módosítása
+
+public function run()
+{
+    $this->call(ReservationSeeder::class);
+
+    // A User tábla feltöltését célzó factory-t érdemes kivenni a további unique hibák elkerülése végett, ugyanis, ha többször futtatjuk a seeder-t akkor az email miatt kiakad.
+}
+
+15. Seeder futtatása
+php artisan db:seed
+
+16. phpmyadmin-ban ellenőrzés, hogy létejött-e a 10 rekord.
+
+-----------------------------------------------------------------
+
+KÓDBÓL GENERÁLT SEEDER-elés
+
+17. Factory létrehozása (életszerű adatokat tud generálni)
+php artisan make:factory ReservationFactory --model=Reservation
+
+Létrejön a database\factories\ReservationFactory.php
+
+18. ReservationFactory szerkesztése
+
+public function definition()
+{
+    return [
+        'name' => $this->faker->name(),
+        'email' => $this->faker->safeEmail(),
+        'reservation_time' => $this->faker->dateTimeBetween('+1 days', '+1 month'),
+        'guests' => $this->faker->numberBetween(1, 10),
+        'note' => $this->faker->sentence(),
+    ];
+}
+
+19. Seeders létrehozása
+php artisan make:seeder ReservationSeeder
+
+Létrejön a database\seeders\ReservationSeeder.php
+
+20. ReservationSeeder szerkesztése
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Reservation;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+
+class ReservationSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Reservation::factory()->count(10)->create();
+    }
+}
+
+21. DatabaseSeeder.php módosítása
+
+public function run()
+{
+    $this->call(ReservationSeeder::class);
+
+    // A User tábla feltöltését célzó factory-t érdemes kivenni a további unique hibák elkerülése végett, ugyanis, ha többször futtatjuk a seeder-t akkor az email miatt kiakad.
+}
+
+22. HasFactory trait hozzáadása a modellhez
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Reservation extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'name',
+        'email',
+        'reservation_time',
+        'guests',
+        'note',
+    ];
+}
+
+
+23. Seeder futtatása
+php artisan db:seed
+
+24. phpmyadmin-ban ellenőrzés, hogy létrejött-e a 10 rekord.
+
+--------------------------------------------------------------------
+phpmyadmin-ban történő import mysql import is lehet.
+--------------------------------------------------------------------
+
+II. Felvonás Controller és endpoint-ok
+
+Áttekintés:
+HTTP metódus	URL	Controller metódus
+GET		/api/reservations	index()
+GET		/api/reservations/{id}	show()
+POST		/api/reservations	store()
+PUT/PATCH	/api/reservations/{id}	update() 
+DELETE		/api/reservations/{id}	destroy()
+
+
+
+
+
+
+
+
+
+
+
+25. Controller létrehozása
+php artisan make:controller Api/ReservationController
+
+Létrejön a app\Http\Controllers\Api\ReservationController.php
+
+26. Controller szerkesztése
+
+Státuszkódok REST API-ban
+Kód	Jelentés	Mikor használd
+200	OK		sikeres GET, PUT, PATCH, DELETE
+201	Created		új rekord sikeres létrehozása (POST)
+204	No Content	sikeres törlés (DELETE), ha nincs mit visszaküldeni
+400	Bad Request	hibás kérés (pl. validációs hiba)
+401	Unauthorized	ha nincs bejelentkezve a felhasználó
+404	Not Found	ha nem található az erőforrás
+500	Server Error	ha valami váratlan hiba történt a szerveren
+
+(Ha nem adunk meg státuszkódot, a response()->json() alapból 200-at használ — de REST API fejlesztésnél jobb szokás explicit megadni, így mindig világos a kliens (pl. frontend fejlesztő) számára, mi történt.)
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Reservation;
+
+class ReservationController extends Controller
+{
+    
+    public function index()
+    {
+        //return \App\Models\Reservation::all(); use nélkül így lehetne használni
+        $reservations = Reservation::all(); //SELECT * FROM reservations; Eloquent ORM lekérdezés futtatása
+        return response()->json($reservations, 200);
+    }
+
+    
+    public function show($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+        if (!$reservation) {
+            return response()->json(['error' => 'Foglalás nem található!'], 404);
+        }
+
+        return response()->json($reservation, 200); 
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email',
+            'reservation_time' => 'required|date',
+            'guests' => 'required|integer|min:1',
+            'note' => 'nullable|string',
+        ]);
+
+        $reservation = Reservation::create($validated);
+        return response()->json($reservation, 201);
+    }
+
+    
+public function update(Request $request, $id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string',
+            'email' => 'sometimes|required|email',
+            'reservation_time' => 'sometimes|required|date',
+            'guests' => 'sometimes|required|integer|min:1',
+            'note' => 'nullable|string',
+        ]);
+
+        //sometimes: csak akkor validálja, ha az adott mező benne van a kérésben, required: ha benne van, akkor nem lehet üres.
+
+        $reservation->update($validated);
+
+        return response()->json($reservation, 200);
+    }
+
+    public function destroy($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+        if (!$reservation) {
+            return response()->json(['error' => 'Foglalás nem található!'], 404);
+        }
+
+        $reservation->delete();
+        return response()->json(['message' => 'Foglalás törölve.'], 200);
+    }
+}
+
+
+
+
+27. api.php megírása
+
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ReservationController;
+
+//Route::middleware('api')->group(function () { //Az összes benne lévő útvonalra alkalmazza az api middleware csoportot (hitelesítés (auth); jogosultságkezelés (can); CORS kezelés; naplózás, IP-ellenőrzés stb.)
+    //teszt API endpoint
+    Route::get('/hello', function () {
+        return response()->json(['message' => 'Hello API']);
+    });
+
+    
+    // Reservation API végpontok
+    Route::get('/reservations', [ReservationController::class, 'index']);         // Összes foglalás
+    Route::get('/reservations/{id}', [ReservationController::class, 'show']);     // Egy foglalás lekérdezése
+    Route::post('/reservations', [ReservationController::class, 'store']);        // Új foglalás létrehozása
+    Route::put('/reservations/{id}', [ReservationController::class, 'update']);   // Foglalás minden mezőjének módosítása
+    Route::patch('/reservations/{id}', [ReservationController::class, 'update']);   // Foglalás adott mezőjének módosítása
+    Route::delete('/reservations/{id}', [ReservationController::class, 'destroy']); // Foglalás törlése
+
+//});
+
+-----------------------------------------
+Route::apiResource('reservations', ReservationController::class);
+5 végpontot hoz létre magától
+
+HTTP metódus	URL			Controller metódus	
+GET		/api/reservations	index()
+GET		/api/reservations/{id}	show()
+POST		/api/reservations	store()
+PUT/PATCH	/api/reservations/{id}	update()
+DELETE		/api/reservations/{id}	destroy()
+
+
+Ilyenkor az api.php agy módosulna:
+
+Route::get('/hello', function () {return response()->json(['message' => 'Hello API']);});
+Route::apiResource('reservations', ReservationController::class);
+
+-----------------------------------------
+
+
+config/app.php-ben az időzónát át kell állítani: 
+'timezone' => 'Europe/Budapest',
+
+Tesztelés POSTMAN-ben
+
+
+
+
