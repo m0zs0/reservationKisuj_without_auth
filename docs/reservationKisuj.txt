@@ -24,16 +24,29 @@ $table->timestamps();
 composer create-project laravel/laravel --prefer-dist reservationKisuj
 
 3. routes/api.php létrehozása
+
+php artisan install:api
+
+Ez a parancs előkészíti a Laravel projektet API fejlesztésre.
+Telepíti és bekonfigurálja az API-sablont.
+-Létrehozza az routes/api.php fájlban az alapértelmezett API útvonalakat.
+-Telepíti a Laravel Sanctum csomagot az API tokenes hitelesítéshez.
+-módosítja a bootstrap/app.php-t
+api: __DIR__.'/../routes/api.php',
+sorral.
+
+Ezután beírjuk:
+
 <?php
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('api')->group(function () {
+//Route::middleware('api')->group(function () { ez a sor nem is kell bele
     Route::get('/hello', function () {
         return response()->json(['message' => 'Hello API']);
     });
-});
+//});
 
 4. bootstrap/app.php ellenőrzése, hogy az api útvonalak benne vannak-e
 ->withRouting(
