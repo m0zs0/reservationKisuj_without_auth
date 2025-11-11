@@ -85,7 +85,7 @@ DB_DATABASE=reservationkisuj
 DB_USERNAME=root
 DB_PASSWORD=
 
-10. Migrációs fájl szerkesztése
+10. Migrációs fájl szerkesztése és futtatása
 
 public function up()
 {
@@ -99,6 +99,10 @@ public function up()
         $table->timestamps();
     });
 }
+
+Majd adjuk ki a 
+php artisan migrate
+parancsot, így a phpmyadminban ellenőrizzük hogy létrejöttek-e a megfelelő táblák.
 
 11. Modell kitöltése
 
