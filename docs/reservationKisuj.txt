@@ -163,7 +163,11 @@ public function run()
 15. Seeder futtatása
 php artisan db:seed
 
-16. phpmyadmin-ban ellenőrzés, hogy létejött-e a 10 rekord.
+(Ahhoz, hogy a timestamp mezők értékei jók legyenek a config/app.php-ben az időzónát át kell állítani: 
+'timezone' => 'Europe/Budapest',
+)
+
+16. phpmyadmin-ban ellenőrzés, hogy létrejött-e a 10 rekord.
 
 -----------------------------------------------------------------
 
@@ -178,6 +182,8 @@ Létrejön a database\factories\ReservationFactory.php
 
 public function definition()
 {
+    $this->faker = FakeFactory::create(’hu_HU’); //magyar adatok letrehozasahoz
+    
     return [
         'name' => $this->faker->name(),
         'email' => $this->faker->safeEmail(),
@@ -414,8 +420,7 @@ Route::apiResource('reservations', ReservationController::class);
 -----------------------------------------
 
 
-config/app.php-ben az időzónát át kell állítani: 
-'timezone' => 'Europe/Budapest',
+
 
 Tesztelés POSTMAN-ben
 
